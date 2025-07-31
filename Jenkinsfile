@@ -1,12 +1,15 @@
 pipeline {
     agent any
 
+    environment {
+        // Define any environment variables here if needed
+    }
+
     stages {
-       
         stage('Build Docker Image') {
             steps {
                 script {
-                    // Build the Docker image from the Dockerfile
+                    echo '🔧 Building Docker image...'
                     sh 'docker-compose build'
                 }
             }
@@ -15,7 +18,7 @@ pipeline {
         stage('Run Docker Container') {
             steps {
                 script {
-                    // Run the container with docker-compose
+                    echo '🚀 Running Docker container...'
                     sh 'docker-compose up -d'
                 }
             }
@@ -24,34 +27,43 @@ pipeline {
         stage('Run Spark Job') {
             steps {
                 script {
-                    // Tail the logs of the Spark job to ensure it's running
-                    sh 'docker-compose logs -f'
+                    echo '📊 Running Spark job...'
+                    sh 'docker-compose logs -f spark-job' // Optional: specify service name instead of logging all
                 }
             }
         }
     }
 
     post {
-    	success {
+        success {
             script {
-                // Notify success to Slack
-                slackSend channel: '#spark-alerts', color: 'good', message: "Build SUCCESSFUL: ${env.JOB_NAME} [${env.BUILD_NUMBER}] (${env.BUILD_URL})"
+                slackSend(
+                    channel: '#spark-alerts',
+                    color: 'good',
+                    message: "✅ Build SUCCESSFUL: ${env.JOB_NAME} [#${env.BUILD_NUMBER}] → ${env.BUILD_URL}"
+                )
             }
         }
+
         failure {
             script {
-                // Notify failure to Slack
-                slackSend channel: '#spark-alerts', color: 'danger', message: "Build FAILED: ${env.JOB_NAME} [${env.BUILD_NUMBER}] (${env.BUILD_URL})"
+                slackSend(
+                    channel: '#spark-alerts',
+                    color: 'danger',
+                    message: "❌ Build FAILED: ${env.JOB_NAME} [#${env.BUILD_NUMBER}] → ${env.BUILD_URL}"
+                )
             }
         }
+
         always {
             script {
-                // Stop and remove containers after the job
+                echo '🧹 Cleaning up containers...'
                 sh 'docker-compose down'
             }
         }
     }
 }
+
 
 
 
